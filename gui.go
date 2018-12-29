@@ -389,10 +389,24 @@ func (g *Gui) MainLoop() error {
 
 // consumeevents handles the remaining events in the events pool.
 func (g *Gui) consumeevents() error {
+	first := true
 	for {
 		select {
 		case ev := <-g.tbEvents:
+			if first {
+				// ensure that we flush before handling a new event for the
+				// first time. MainLoop calls this function after handling
+				// a single event but before flushing.
+				first = false
+				if err := g.flush(); err != nil {
+					return err
+				}
+			}
 			if err := g.handleEvent(&ev); err != nil {
+				return err
+			}
+			// ensure that we flush after each event
+			if err := g.flush(); err != nil {
 				return err
 			}
 		case ev := <-g.userEvents:
